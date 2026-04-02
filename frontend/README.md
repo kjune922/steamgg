@@ -1,36 +1,124 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# steamgg Frontend
 
-## Getting Started
+## 프로젝트 소개
 
-First, run the development server:
+`steamgg` 프론트엔드는 게임 탐색 MVP를 빠르게 검증하기 위해 만든 Next.js + TypeScript 기반 애플리케이션이다.
+
+이 MVP의 핵심 목표는 사용자가 아래 흐름을 자연스럽게 따라가게 만드는 것이었다.
+
+- ROOT에서 검색을 시작한다.
+- LIST에서 검색 결과를 필터링하고 정렬한다.
+- DETAIL에서 게임을 비교하고 구매 판단을 한다.
+
+포트폴리오 관점에서 이 프로젝트는 단순히 화면 3개를 만든 것이 아니라, 검색 진입부터 상세 판단까지 이어지는 사용자 탐색 흐름을 작은 구조 안에서 명확하게 설계한 작업이다.
+
+## 왜 이런 구조를 선택했는가
+
+이번 MVP에서는 복잡한 전역 상태관리나 과한 컴포넌트 분리를 먼저 도입하지 않았다.
+
+이유는 명확하다.
+
+- 현재 범위는 3페이지 MVP이며, 먼저 사용자 흐름을 검증하는 것이 우선이었다.
+- 검색어, 필터, 정렬 상태는 URL query parameter로 표현할 수 있기 때문에 별도 전역 상태 없이도 충분히 일관된 화면을 만들 수 있었다.
+- 화면 구조보다 중요한 것은 "검색 -> 탐색 -> 상세 진입" 흐름이 자연스럽게 이어지는지였다.
+
+그래서 프론트 구조도 이 목적에 맞게 단순하게 가져갔다.
+
+- `app/page.tsx`: ROOT
+- `app/list/page.tsx`: LIST
+- `app/detail/[id]/page.tsx`: DETAIL
+- `app/lib/games.ts`: MVP 단계에서 공통으로 사용하는 게임 데이터와 헬퍼
+
+이 구조는 페이지 책임이 명확하고, 나중에 실제 API 연동으로 넘어갈 때도 교체 지점이 분명하다는 장점이 있다.
+
+## 페이지별 설계 의도
+
+### 1. ROOT
+
+ROOT는 사용자가 처음 들어오는 진입 페이지다.
+
+이 페이지에서 가장 중요한 것은 화려한 소개가 아니라, 바로 행동을 시작할 수 있게 만드는 것이다. 그래서 다음 3가지만 우선 배치했다.
+
+- 검색창
+- 인기 게임 일부 노출
+- 로그인 버튼 UI
+
+검색창은 가장 먼저 보이도록 두어 사용자가 바로 LIST로 이동할 수 있게 했다.  
+인기 게임 카드는 검색어가 없더라도 탐색을 시작할 수 있도록 만든 보조 진입점이다.  
+로그인 버튼은 현재 MVP 범위에서는 실제 인증이 아니라, 이후 확장 가능성을 보여주는 UI 수준으로만 두었다.
+
+즉 ROOT는 정보를 많이 보여주는 페이지가 아니라, 사용자를 다음 행동으로 밀어주는 페이지로 설계했다.
+
+### 2. LIST
+
+LIST는 이 MVP에서 가장 중요한 탐색 페이지다.
+
+사용자는 ROOT에서 검색어를 가지고 들어오고, LIST에서는 그 결과를 좁혀가며 원하는 게임을 찾는다. 이 역할에 맞춰 아래 기능을 중심으로 설계했다.
+
+- 검색어 반영
+- 장르 필터
+- 정렬 옵션
+- 상세 진입 링크
+
+특히 검색어, 필터, 정렬 상태를 URL query parameter와 맞춘 이유는 다음과 같다.
+
+- 새로고침해도 상태가 유지된다.
+- 링크를 공유했을 때 같은 조건의 화면을 그대로 재현할 수 있다.
+- 상태 소스가 URL 하나로 정리되어 디버깅이 쉽다.
+
+포트폴리오 관점에서는 단순히 목록을 출력한 것이 아니라, "탐색 조건을 URL과 동기화해서 상태 일관성을 유지했다"는 점이 설계 포인트다.
+
+### 3. DETAIL
+
+DETAIL은 사용자가 최종적으로 게임을 판단하는 페이지다.
+
+그래서 이 페이지는 많은 정보를 나열하기보다, 판단에 직접 필요한 정보 위주로 구성했다.
+
+- 게임 제목
+- 설명
+- 이미지
+- 구매 링크
+- 장르/태그
+- 유사 게임
+
+구매 링크는 행동 전환 지점이고, 유사 게임은 사용자가 현재 게임이 마음에 들지 않더라도 탐색을 끊지 않게 만드는 장치다.
+
+유사 게임 로직도 과하게 복잡하게 만들지 않았다. MVP 단계에서는 장르와 태그를 기준으로 단순하고 설명 가능한 방식으로 연결하는 것이 더 적절하다고 판단했다. 이 방식은 추천 품질보다, 왜 이 게임이 함께 노출되는지 납득 가능한 구조를 만드는 데 초점을 둔다.
+
+## 구현 관점에서 강조하고 싶은 점
+
+이 프로젝트에서 중요하게 본 것은 "기능 수"보다 "흐름의 설계"였다.
+
+- ROOT는 검색 시작을 빠르게 만든다.
+- LIST는 조건 조정을 쉽게 만든다.
+- DETAIL은 판단과 다음 탐색을 돕는다.
+
+즉 각 페이지를 따로 만든 것이 아니라, 하나의 게임 탐색 여정을 세 단계로 나눈 구조다.
+
+또한 MVP 단계에서는 새 라이브러리 도입보다 현재 스택 안에서 문제를 단순하게 해결하는 데 집중했다. 이 점은 제한된 범위 안에서 우선순위를 세우고 구현한 경험으로 설명할 수 있다.
+
+## 기술 스택
+
+- Next.js (App Router)
+- React
+- TypeScript
+- Tailwind CSS
+
+## 실행 방법
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+브라우저에서 `http://localhost:3000`으로 접속하면 된다.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 앞으로의 확장 방향
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+현재 프론트는 MVP 검증을 위해 로컬 데이터 기반으로 구성되어 있다. 이후에는 아래 순서로 확장할 수 있다.
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- 백엔드 API 연동
+- 인기 게임/검색 결과/상세 데이터 실데이터화
+- 필터 메타데이터 API 연결
+- 유사 게임 로직 고도화
+- 로그인 UI와 실제 인증 흐름 연결
