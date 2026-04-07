@@ -6,112 +6,233 @@ type ListPageProps = {
 };
 
 function asValue(input: string | string[] | undefined) {
-  if (Array.isArray(input)) {
-    return input[0] ?? "";
-  }
+  if (Array.isArray(input)) return input[0] ?? "";
   return input ?? "";
 }
 
 const sortOptions = ["popular", "rating", "title"] as const;
+const allTags = Array.from(new Set(games.flatMap((g) => g.tags))).sort();
+
+function buildUrl(p: {
+  q: string;
+  genre: string;
+  tag: string;
+  sort: string;
+}) {
+  const params = new URLSearchParams();
+  if (p.q) params.set("q", p.q);
+  if (p.genre && p.genre !== "All") params.set("genre", p.genre);
+  if (p.tag) params.set("tag", p.tag);
+  if (p.sort && p.sort !== "popular") params.set("sort", p.sort);
+  const qs = params.toString();
+  return `/list${qs ? `?${qs}` : ""}`;
+}
 
 export default async function ListPage({ searchParams }: ListPageProps) {
-  const params = (await searchParams) ?? {};
-  const rawQuery = asValue(params.q).trim();
+  const raw = (await searchParams) ?? {};
+  const rawQuery = asValue(raw.q).trim();
   const query = rawQuery.toLowerCase();
-  const genreParam = asValue(params.genre);
-  const sortParam = asValue(params.sort);
-  const genre = genres.includes(genreParam as (typeof genres)[number]) ? genreParam : "All";
+  const genreParam = asValue(raw.genre);
+  const tagParam = asValue(raw.tag);
+  const sortParam = asValue(raw.sort);
+
+  const genre = genres.includes(genreParam as (typeof genres)[number])
+    ? genreParam
+    : "All";
+  const tag = allTags.includes(tagParam) ? tagParam : "";
   const sort = sortOptions.includes(sortParam as (typeof sortOptions)[number])
     ? sortParam
     : "popular";
 
   let filtered = games.filter((game) => {
-    const matchesQuery = query.length === 0 || game.title.toLowerCase().includes(query);
+    const matchesQuery =
+      query.length === 0 || game.title.toLowerCase().includes(query);
     const matchesGenre = genre === "All" || game.genre === genre;
-    return matchesQuery && matchesGenre;
+    const matchesTag = tag === "" || game.tags.includes(tag);
+    return matchesQuery && matchesGenre && matchesTag;
   });
 
   filtered = filtered.sort((a, b) => {
-    if (sort === "rating") {
-      return b.rating - a.rating;
-    }
-    if (sort === "title") {
-      return a.title.localeCompare(b.title);
-    }
+    if (sort === "rating") return b.rating - a.rating;
+    if (sort === "title") return a.title.localeCompare(b.title);
     return b.popularity - a.popularity;
   });
 
+  const sortLabels: Record<string, string> = {
+    popular: "Popular",
+    rating: "Rating",
+    title: "A–Z",
+  };
+
   return (
     <main className="mx-auto w-full max-w-5xl px-5 py-8 sm:px-8 sm:py-10">
-      <section className="panel">
-        <h1 className="text-2xl font-bold text-slate-900">Game list</h1>
-        <p className="mt-2 text-sm text-slate-600">
-          Search results with genre filter and sorting.
-        </p>
+      {/* ── Search ── */}
+      <form className="flex gap-2">
+        {genre !== "All" && <input type="hidden" name="genre" value={genre} />}
+        {tag && <input type="hidden" name="tag" value={tag} />}
+        {sort !== "popular" && <input type="hidden" name="sort" value={sort} />}
+        <input
+          name="q"
+          defaultValue={rawQuery}
+          placeholder="Search games..."
+          aria-label="Search games"
+          className="h-11 flex-1 rounded-xl border border-[#2A313C] bg-[#181C22] px-4 text-sm text-[#F5F7FA] placeholder:text-[#8A93A0] focus:border-[#E60023] focus:outline-none focus:ring-1 focus:ring-[#E60023] transition-colors"
+        />
+        <button
+          type="submit"
+          className="h-11 rounded-xl bg-[#E60023] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#C4001E]"
+        >
+          Search
+        </button>
+      </form>
 
-        <form className="mt-5 grid gap-3 sm:grid-cols-4">
-          <input
-            name="q"
-            defaultValue={rawQuery}
-            placeholder="Search title"
-            className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm sm:col-span-2"
-          />
-          <select
-            name="genre"
-            defaultValue={genre}
-            className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm"
-          >
-            {genres.map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
-          </select>
-          <select
-            name="sort"
-            defaultValue={sort}
-            className="h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm"
-          >
-            <option value="popular">Popular</option>
-            <option value="rating">Rating</option>
-            <option value="title">Title</option>
-          </select>
-          <button
-            type="submit"
-            className="h-11 rounded-xl bg-slate-900 px-4 text-sm font-semibold text-white sm:col-span-4 sm:w-32"
-          >
-            Apply
-          </button>
-        </form>
-      </section>
+      {/* ── Filters ── */}
+      <div className="mt-5 space-y-3">
+        {/* Genre chips */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="mr-1 text-xs font-medium text-[#8A93A0]">Genre</span>
+          {genres.map((g) => (
+            <Link
+              key={g}
+              href={buildUrl({ q: rawQuery, genre: g, tag, sort })}
+              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                genre === g
+                  ? "bg-[#E60023] text-white"
+                  : "border border-[#2A313C] bg-[#181C22] text-[#B6BEC9] hover:bg-[#20252D]"
+              }`}
+            >
+              {g}
+            </Link>
+          ))}
+        </div>
 
-      <section className="mt-6 grid gap-3">
+        {/* Tag chips */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="mr-1 text-xs font-medium text-[#8A93A0]">Tag</span>
+          {allTags.map((t) => {
+            const isActive = tag === t;
+            return (
+              <Link
+                key={t}
+                href={buildUrl({
+                  q: rawQuery,
+                  genre,
+                  tag: isActive ? "" : t,
+                  sort,
+                })}
+                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                  isActive
+                    ? "bg-[#2A1116] border border-[#E60023] text-[#E60023]"
+                    : "border border-[#2A313C] bg-[#181C22] text-[#B6BEC9] hover:bg-[#20252D]"
+                }`}
+              >
+                {t}
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* Sort chips */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="mr-1 text-xs font-medium text-[#8A93A0]">Sort</span>
+          {sortOptions.map((s) => (
+            <Link
+              key={s}
+              href={buildUrl({ q: rawQuery, genre, tag, sort: s })}
+              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                sort === s
+                  ? "bg-[#E60023] text-white"
+                  : "border border-[#2A313C] bg-[#181C22] text-[#B6BEC9] hover:bg-[#20252D]"
+              }`}
+            >
+              {sortLabels[s]}
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Active filter summary ── */}
+      {(genre !== "All" || tag || sort !== "popular" || rawQuery) && (
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <span className="text-xs text-[#8A93A0]">Active:</span>
+          {rawQuery && (
+            <span className="rounded-md bg-[#20252D] px-2 py-1 text-xs text-[#B6BEC9]">
+              "{rawQuery}"
+            </span>
+          )}
+          {genre !== "All" && (
+            <span className="rounded-md bg-[#20252D] px-2 py-1 text-xs text-[#B6BEC9]">
+              {genre}
+            </span>
+          )}
+          {tag && (
+            <span className="rounded-md bg-[#20252D] px-2 py-1 text-xs text-[#B6BEC9]">
+              #{tag}
+            </span>
+          )}
+          <Link
+            href="/list"
+            className="ml-1 text-xs text-[#8A93A0] underline hover:text-[#B6BEC9]"
+          >
+            Clear all
+          </Link>
+        </div>
+      )}
+
+      {/* ── Results ── */}
+      <section className="mt-6" aria-label="Search results">
         {filtered.length === 0 ? (
-          <div className="panel p-6 text-sm text-slate-600">No games matched your criteria.</div>
+          <div className="panel flex flex-col items-center py-16 text-center">
+            <p className="text-sm font-medium text-[#F5F7FA]">No games found</p>
+            <p className="mt-1 text-xs text-[#8A93A0]">
+              Try a different search term or remove a filter.
+            </p>
+            <Link
+              href="/list"
+              className="mt-4 rounded-lg bg-[#E60023] px-4 py-2 text-xs font-semibold text-white hover:bg-[#C4001E]"
+            >
+              Clear filters
+            </Link>
+          </div>
         ) : (
-          filtered.map((game) => (
-            <article key={game.id} className="panel p-4 sm:p-5">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-xs text-slate-500">{game.genre}</p>
-                  <h2 className="mt-1 text-lg font-semibold text-slate-900">{game.title}</h2>
-                  <p className="mt-2 text-sm text-slate-600">{game.shortDescription}</p>
-                </div>
-                <p className="text-sm font-semibold text-slate-700">{game.priceLabel}</p>
-              </div>
-              <div className="mt-4 flex items-center justify-between">
-                <p className="text-xs text-slate-500">
-                  Rating {game.rating} / Popularity {game.popularity}
-                </p>
+          <>
+            <p className="mb-4 text-xs text-[#8A93A0]">
+              {filtered.length}개 게임
+            </p>
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+              {filtered.map((game) => (
                 <Link
+                  key={game.id}
                   href={`/detail/${game.id}`}
-                  className="rounded-lg bg-teal-700 px-3 py-2 text-xs font-semibold text-white"
+                  className="panel panel-hover flex flex-col overflow-hidden"
                 >
-                  Detail
+                  <img
+                    src={game.coverImageUrl}
+                    alt={`${game.title} cover`}
+                    className="h-36 w-full flex-shrink-0 object-cover sm:h-40"
+                  />
+                  <div className="flex flex-1 flex-col p-3">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-xs text-[#8A93A0]">{game.genre}</span>
+                      <span className="text-xs text-[#8A93A0]">★ {game.rating}</span>
+                    </div>
+                    <h2 className="mt-1 line-clamp-1 text-sm font-semibold text-[#F5F7FA]">
+                      {game.title}
+                    </h2>
+                    <p className="mt-1 line-clamp-1 text-xs text-[#8A93A0]">
+                      {game.tags.slice(0, 2).join(" · ")}
+                    </p>
+                    <div className="mt-auto flex items-center justify-between pt-3">
+                      <span className="text-xs text-[#8A93A0]">인기 {game.popularity}위</span>
+                      <span className="text-xs font-semibold text-[#F5F7FA]">
+                        {game.priceLabel}
+                      </span>
+                    </div>
+                  </div>
                 </Link>
-              </div>
-            </article>
-          ))
+              ))}
+            </div>
+          </>
         )}
       </section>
     </main>
