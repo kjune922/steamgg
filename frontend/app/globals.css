@@ -1,33 +1,41 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f3f7f8;
-  --surface: #ffffff;
-  --foreground: #0f172a;
-  --edge: #d7dde3;
+  --background: #0F1115;
+  --surface: #181C22;
+  --surface-hover: #20252D;
+  --border: #2A313C;
+  --text-primary: #F5F7FA;
+  --text-secondary: #B6BEC9;
+  --text-muted: #8A93A0;
+  --accent: #E60023;
+  --accent-hover: #C4001E;
+  --accent-soft: #2A1116;
 }
 
 @theme inline {
   --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-foreground: var(--text-primary);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
 body {
   min-height: 100vh;
-  background:
-    radial-gradient(circle at top right, #d0f0e8 0%, transparent 35%),
-    radial-gradient(circle at left 30%, #e8f0ff 0%, transparent 30%),
-    var(--background);
-  color: var(--foreground);
+  background-color: var(--background);
+  color: var(--text-primary);
   font-family: var(--font-geist-sans), sans-serif;
 }
 
 .panel {
-  border: 1px solid var(--edge);
-  border-radius: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
   background: var(--surface);
-  box-shadow: 0 6px 24px rgba(15, 23, 42, 0.05);
-  padding: 1.25rem;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+a.panel:hover,
+.panel-hover:hover {
+  background: var(--surface-hover);
+  transform: translateY(-2px);
 }
