@@ -2,60 +2,63 @@ import Link from "next/link";
 import { games } from "./lib/games";
 
 export default function Home() {
-  const popularGames = [...games].sort((a, b) => b.popularity - a.popularity).slice(0, 3);
+  const popularGames = [...games].sort((a, b) => b.popularity - a.popularity).slice(0, 4);
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-5 py-8 sm:px-8 sm:py-10">
-      <section className="panel">
-        <div className="flex items-center justify-between gap-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">
-            steamgg MVP
-          </p>
-          <button
-            type="button"
-            className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800"
-          >
-            Login
-          </button>
-        </div>
-        <h1 className="mt-5 text-3xl font-bold text-slate-900 sm:text-4xl">
-          Find your next game faster.
+    <main className="mx-auto w-full max-w-5xl px-5 py-14 sm:px-8 sm:py-20">
+      {/* Hero: search first */}
+      <section className="flex flex-col items-center text-center">
+        <h1 className="text-3xl font-bold text-[#F5F7FA] sm:text-4xl">
+          Find your next game
         </h1>
-        <p className="mt-3 max-w-2xl text-sm text-slate-600 sm:text-base">
-          Search by title, move to filtered results, then open detail pages for description,
-          purchase links, and similar picks.
+        <p className="mt-3 text-sm text-[#8A93A0]">
+          Search by title and discover games instantly
         </p>
-        <form action="/list" className="mt-6 flex flex-col gap-3 sm:flex-row">
+        <form action="/list" className="mt-8 flex w-full max-w-xl gap-2">
           <input
             name="q"
-            placeholder="Search games like Elden Ring"
-            className="h-12 flex-1 rounded-xl border border-slate-300 bg-white px-4 text-sm text-slate-900"
+            placeholder="Search games like Elden Ring..."
+            className="h-12 flex-1 rounded-xl border border-[#2A313C] bg-[#181C22] px-4 text-sm text-[#F5F7FA] placeholder:text-[#8A93A0] focus:border-[#E60023] focus:outline-none focus:ring-1 focus:ring-[#E60023] transition-colors"
           />
           <button
             type="submit"
-            className="h-12 rounded-xl bg-slate-900 px-5 text-sm font-semibold text-white"
+            className="h-12 rounded-xl bg-[#E60023] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#C4001E]"
           >
             Search
           </button>
         </form>
       </section>
 
-      <section className="mt-6">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-slate-900">Popular right now</h2>
-          <Link href="/list?sort=popular" className="text-sm font-medium text-teal-700">
-            View all
+      {/* Popular games grid */}
+      <section className="mt-16">
+        <div className="mb-5 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-[#F5F7FA]">Popular right now</h2>
+          <Link
+            href="/list?sort=popular"
+            className="text-sm font-medium text-[#E60023] transition-colors hover:text-[#C4001E]"
+          >
+            View all →
           </Link>
         </div>
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {popularGames.map((game) => (
-            <Link key={game.id} href={`/detail/${game.id}`} className="panel block p-4">
-              <p className="text-xs text-slate-500">{game.genre}</p>
-              <h3 className="mt-2 text-base font-semibold text-slate-900">{game.title}</h3>
-              <p className="mt-2 text-sm text-slate-600">{game.shortDescription}</p>
-              <p className="mt-3 text-xs font-semibold uppercase tracking-widest text-teal-700">
-                Popularity {game.popularity}
-              </p>
+            <Link
+              key={game.id}
+              href={`/detail/${game.id}`}
+              className="panel panel-hover block overflow-hidden"
+            >
+              <img
+                src={game.coverImageUrl}
+                alt={`${game.title} cover`}
+                className="h-32 w-full object-cover"
+              />
+              <div className="p-3">
+                <p className="text-xs text-[#8A93A0]">{game.genre}</p>
+                <h3 className="mt-1 text-sm font-semibold leading-tight text-[#F5F7FA]">
+                  {game.title}
+                </h3>
+                <p className="mt-1 text-xs text-[#B6BEC9]">{game.priceLabel}</p>
+              </div>
             </Link>
           ))}
         </div>
