@@ -1,0 +1,38 @@
+# root
+node_modules/
+package-lock.json
+package.json
+
+# local environment
+.env
+.env.*
+!.env.example
+
+# IntelliJ
+.idea/
+*.iml
+
+# frontend
+frontend/node_modules/
+frontend/.next/
+frontend/.env.local
+
+# backend
+backend/.env
+backend/.env.*
+!backend/.env.example
+backend/build/
+backend/.gradle/
+
+# local database assets
+infra/docker-compose.yml
+infra/docker-compose.override.yml
+infra/*.sql
+infra/*.dump
+infra/*.bak
+infra/schema/
+
+# Claude Code 캐시
+.claude/skills/**/__pycache__/
+.claude/skills/**/scripts/result*.txt
+.claude/settings.local.json

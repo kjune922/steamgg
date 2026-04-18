@@ -1,8 +1,11 @@
 package com.example.demo;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.CrossOrigin;
 
 import java.util.Arrays;
 import java.util.List;
@@ -54,20 +57,29 @@ public class HelloController {
 }*/ // 예전에 더미데이터로 돌리던 코드
 
 @RestController
-@CrossOrigin(origins = "http://localhost:3000")
 public class HelloController {
 
     private final GameRepository gameRepository;
     private final SteamService steamService; // 서비스 추가
+    private final String adminSyncApiKey;
 
-    public HelloController(GameRepository gameRepository, SteamService steamService) {
+    public HelloController(
+            GameRepository gameRepository,
+            SteamService steamService,
+            @Value("${admin.sync.api-key:}") String adminSyncApiKey
+    ) {
         this.gameRepository = gameRepository;
         this.steamService = steamService;
+        this.adminSyncApiKey = adminSyncApiKey;
     }
 
     // 이 주소를 치면 지정된 스팀 ID의 게임들을 싹 긁어옴
     @GetMapping("/api/admin/sync")
-    public String syncSteam() {
+    public ResponseEntity<String> syncSteam(@RequestHeader(value = "X-Admin-Api-Key", required = false) String apiKey) {
+        if (adminSyncApiKey.isBlank() || !adminSyncApiKey.equals(apiKey)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("관리자 인증이 필요합니다.");
+        }
+
         // 테스트용 스팀 인기 게임 ID 리스트 (팰월드, 헬다이버즈2, 하이파이 러시, 더 파이널스, 철권, 그레이브 키퍼)
         String[] targetAppIds = {"1623730", "553850", "1817230", "1966720", "1778820","599140"};
 
@@ -75,7 +87,7 @@ public class HelloController {
             steamService.fetchAndSaveGame(appId);
         }
 
-        return "스팀 데이터 동기화 요청 완료!";
+        return ResponseEntity.ok("스팀 데이터 동기화 요청 완료!");
     }
 
     @GetMapping("/api/games")

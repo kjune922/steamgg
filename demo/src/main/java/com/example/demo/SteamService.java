@@ -1,14 +1,21 @@
 package com.example.demo;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.web.client.RestTemplate;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 @Service
 public class SteamService {
+
+    private static final Logger log = LoggerFactory.getLogger(SteamService.class);
+    private static final Pattern STEAM_APP_ID_PATTERN = Pattern.compile("\\d{1,10}");
 
     private final GameRepository gameRepository;
     private final RestTemplate restTemplate;
@@ -22,7 +29,16 @@ public class SteamService {
 
     // 특정 게임 ID(AppID)를 주면 스팀에서 정보를 가져와 DB에 저장하는 함수
     public void fetchAndSaveGame(String appId) {
-        String url = "https://store.steampowered.com/api/appdetails?appids=" + appId + "&l=korean";
+        if (appId == null || !STEAM_APP_ID_PATTERN.matcher(appId).matches()) {
+            log.warn("잘못된 Steam appId 형식입니다. appId={}", appId);
+            return;
+        }
+
+        String url = UriComponentsBuilder
+                .fromUriString("https://store.steampowered.com/api/appdetails")
+                .queryParam("appids", appId)
+                .queryParam("l", "korean")
+                .toUriString();
 
         try {
             // 2. 일단 문자열로 통째로 가져옴
@@ -31,7 +47,7 @@ public class SteamService {
             // 3. 문자열을 JsonNode 트리구조로 변환
             JsonNode response = objectMapper.readTree(jsonString);
             if (response == null || !response.has(appId)) {
-                System.out.println("스팀서버에서 응답이 없거나 잘못된 ID입니다.");
+                log.warn("Steam 서버 응답이 없거나 잘못된 ID입니다. appId={}", appId);
                 return;
             }
             JsonNode root = response.get(appId);
@@ -56,11 +72,11 @@ public class SteamService {
                     );
 
                     gameRepository.save(game);
-                    System.out.println("스팀에서 수집 완료: " + title);
+                    log.info("Steam 게임 수집 완료. appId={}, title={}", appId, title);
                 }
             }
         } catch (Exception e) {
-            System.out.println("게임 수집 실패 (ID: " + appId + "): " + e.getMessage());
+            log.warn("Steam 게임 수집 실패. appId={}", appId, e);
         }
 
     }
