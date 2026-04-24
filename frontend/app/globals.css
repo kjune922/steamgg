@@ -1,0 +1,89 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0F1115;
+  --surface: #181C22;
+  --surface-hover: #20252D;
+  --border: #2A313C;
+  --text-primary: #F5F7FA;
+  --text-secondary: #B6BEC9;
+  --text-muted: #8A93A0;
+  --accent: #E60023;
+  --accent-hover: #C4001E;
+  --accent-soft: #2A1116;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--text-primary);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  min-height: 100vh;
+  background-color: var(--background);
+  color: var(--text-primary);
+  font-family: var(--font-geist-sans), sans-serif;
+  line-height: 1.6;
+}
+
+.panel {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+a.panel,
+.panel-hover {
+  cursor: pointer;
+}
+
+a.panel:hover,
+.panel-hover:hover {
+  background: var(--surface-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+a.panel:focus-visible,
+.panel-hover:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel,
+  a.panel:hover,
+  .panel-hover:hover {
+    transition: none;
+    transform: none;
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+main {
+  animation: fade-in 0.2s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  main { animation: none; }
+}
+
+.scroll-row {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+.scroll-row::-webkit-scrollbar { display: none; }
+.scroll-row > * {
+  scroll-snap-align: start;
+}
