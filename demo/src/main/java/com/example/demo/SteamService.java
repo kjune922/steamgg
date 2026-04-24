@@ -1,6 +1,7 @@
 package com.example.demo;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -19,9 +20,31 @@ public class SteamService {
         this.restTemplate = restTemplate;
         this.objectMapper = new ObjectMapper(); //1
     }
+    @Scheduled(fixedDelay = 3600000)
+    public void autoSyncSteamGames() {
+        System.out.println(">>> [스케줄러] 정기 스팀 데이터 수집 시작");
+
+        // 1. 인기 ID 목록 가져오기 (앞서 만든 메서드)
+        List<String> popularIds = fetchPopularAppIds();
+
+        int newCount = 0;
+        for (String appId : popularIds) {
+            // 2. 이미 있는 게임인지 체크 후 저장 (fetchAndSaveGame 내부에 existsById 로직 포함 필수)
+            fetchAndSaveGame(appId);
+
+            // 3. 스팀 서버 매너를 위해 0.5초씩 쉬어주기 (선택사항이지만 권장)
+            try { Thread.sleep(500); } catch (InterruptedException e) { e.printStackTrace(); }
+        }
+
+        System.out.println(">>> [스케줄러] 정기 수집 완료");
+    }
 
     // 특정 게임 ID(AppID)를 주면 스팀에서 정보를 가져와 DB에 저장하는 함수
     public void fetchAndSaveGame(String appId) {
+        if(gameRepository.existsById(appId)){
+            return;
+        }
+
         String url = "https://store.steampowered.com/api/appdetails?appids=" + appId + "&l=korean";
 
         try {
@@ -63,5 +86,27 @@ public class SteamService {
             System.out.println("게임 수집 실패 (ID: " + appId + "): " + e.getMessage());
         }
 
+    }
+
+    public List<String> fetchPopularAppIds() {
+        String url = "https://store.steampowered.com/api/featuredcategories";
+        List<String> popularIds = new ArrayList<>();
+
+        try {
+            String jsonString = restTemplate.getForObject(url, String.class);
+            JsonNode root = objectMapper.readTree(jsonString);
+
+            // '인기 신제품(new_releases)' 섹션에서 게임 ID들을 추출
+            JsonNode newReleases = root.get("new_releases").get("items");
+            for (JsonNode item : newReleases) {
+                popularIds.add(item.get("id").asText());
+            }
+
+            System.out.println("자동으로 찾은 게임 개수: " + popularIds.size());
+        } catch (Exception e) {
+            System.out.println("ID 목록 가져오기 실패: " + e.getMessage());
+        }
+
+        return popularIds;
     }
 }

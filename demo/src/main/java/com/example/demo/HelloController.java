@@ -69,17 +69,22 @@ public class HelloController {
     @GetMapping("/api/admin/sync")
     public String syncSteam() {
         // 테스트용 스팀 인기 게임 ID 리스트 (팰월드, 헬다이버즈2, 하이파이 러시, 더 파이널스, 철권, 그레이브 키퍼)
-        String[] targetAppIds = {"1623730", "553850", "1817230", "1966720", "1778820","599140"};
-
+        // String[] targetAppIds = {"1623730", "553850", "1817230", "1966720", "1778820","599140","730"};
+        List<String> targetAppIds = steamService.fetchPopularAppIds();
+        int count = 0;
         for (String appId : targetAppIds) {
+            count++;
             steamService.fetchAndSaveGame(appId);
         }
 
-        return "스팀 데이터 동기화 요청 완료!";
+        // return "스팀 데이터 동기화 요청 완료!";
+        return "스팀 게임 " + count + " 개 동기화 완료";
     }
 
     @GetMapping("/api/games")
     public List<Games> getGames() {
         return gameRepository.findAll();
     }
+
+
 }

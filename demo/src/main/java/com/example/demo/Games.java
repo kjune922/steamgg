@@ -9,20 +9,29 @@ public class Games {
     private String id;
 
     private String title;
+
+    @Column(columnDefinition = "TEXT")
     private String genre;
 
     @ElementCollection // 간단한 문자열 리스트 저장
     private List<String> tags;
 
+    @Column(columnDefinition = "TEXT")
     private String coverImageUrl;
+
     private double rating;
     private int popularity;
+
+    @Column(columnDefinition = "TEXT")
     private String priceLabel;
+
+    @Column(columnDefinition = "TEXT")
     private String shortDescription;
 
     @Column(columnDefinition = "TEXT") // 긴 문장 저장용
     private String description;
 
+    @Column(columnDefinition = "TEXT")
     private String purchaseUrl;
 
     // 기본 생성자 필수
