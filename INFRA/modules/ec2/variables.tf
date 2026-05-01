@@ -28,3 +28,9 @@ variable "steamgg_private_subnet_ids"{
 variable "steamgg_target_group_arn"{
   type = string
 }
+
+variable "steamgg_ecr_repository_url" {
+  type        = string
+  description = "ECR Repository URL"
+}
+

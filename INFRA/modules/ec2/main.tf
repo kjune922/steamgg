@@ -18,8 +18,10 @@ resource "aws_launch_template" "steamgg_launch_template" {
   vpc_security_group_ids = [aws_security_group.steamgg_sg.id]
 
   user_data = base64encode(templatefile("${path.module}/userdata_steamgg.sh",{db_endpoint = var.steamgg_rds_address,
-  db_username = var.steamgg_db_username,
-  db_password = var.steamgg_db_password 
+  DB_USERNAME = var.steamgg_db_username,
+  DB_PASSWORD = var.steamgg_db_password,
+  DB_ENDPOINT = var.steamgg_rds_address,
+  ECR_URL = var.steamgg_ecr_repository_url
   }))
    
   iam_instance_profile {
