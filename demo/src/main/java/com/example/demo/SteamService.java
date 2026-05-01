@@ -96,7 +96,7 @@ public class SteamService {
             String jsonString = restTemplate.getForObject(url, String.class);
             JsonNode root = objectMapper.readTree(jsonString);
 
-            // '인기 신제품(new_releases)' 섹션에서 게임 ID들을 추출
+            // 인기 신제품(new_releases) 섹션에서 게임 ID들을 추출
             JsonNode newReleases = root.get("new_releases").get("items");
             for (JsonNode item : newReleases) {
                 popularIds.add(item.get("id").asText());
