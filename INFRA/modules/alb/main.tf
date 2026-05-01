@@ -15,7 +15,7 @@ resource "aws_lb" "steamgg_alb" {
 
 resource "aws_lb_target_group" "steamgg_target" {
   name = "steamgg-target-group-${terraform.workspace}"
-  port = 80
+  port = 8080
   protocol = "HTTP"
   vpc_id = var.steamgg_vpc_id
 
