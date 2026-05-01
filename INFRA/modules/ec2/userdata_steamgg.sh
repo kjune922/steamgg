@@ -24,5 +24,4 @@ docker run -d \
   -e DB_ENDPOINT=${DB_ENDPOINT} \
   -e DB_USERNAME=${DB_USERNAME} \
   -e DB_PASSWORD=${DB_PASSWORD} \
-  -e DB_NAME=${DB_NAME} \
   ${ECR_URL}:latest
