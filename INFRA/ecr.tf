@@ -1,7 +1,7 @@
 resource "aws_ecr_repository" "steamgg_app_repo" {
-  name                 = "steamgg-app-repo-${terraform.workspace}"
+  name = "steamgg-app-repo-${terraform.workspace}"
 
-  force_delete = true
+  force_delete         = true
   image_tag_mutability = "MUTABLE"
 
   image_scanning_configuration {

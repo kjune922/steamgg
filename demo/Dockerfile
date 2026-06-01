@@ -14,5 +14,7 @@ WORKDIR /app
 # 1단계에서 빌드된 jar 파일만 가져옵니다.
 COPY --from=build /app/target/app.jar app.jar
 
+EXPOSE 8080
+
 # 컨테이너 실행
 ENTRYPOINT ["java", "-jar", "app.jar"]

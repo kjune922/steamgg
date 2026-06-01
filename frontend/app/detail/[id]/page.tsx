@@ -2,7 +2,14 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { fetchGame, fetchSimilarGames } from "../../lib/games";
+import {
+  fetchGame,
+  fetchSimilarGames,
+  formatRating,
+  formatReviewScoreDescription,
+  formatReviewSummary,
+  hasSteamReviews,
+} from "../../lib/games";
 
 type DetailPageProps = {
   params: Promise<{ id: string }>;
@@ -10,16 +17,21 @@ type DetailPageProps = {
 
 export async function generateMetadata({ params }: DetailPageProps): Promise<Metadata> {
   const { id } = await params;
-  const game = await fetchGame(id);
+  const game = await fetchGame(id).catch(() => null);
   if (!game) return { title: "Game Not Found | steamgg" };
+
+  const openGraph: Metadata["openGraph"] = {
+    title: game.title,
+    description: game.shortDescription,
+  };
+  if (game.coverImageUrl.startsWith("http")) {
+    openGraph.images = [{ url: game.coverImageUrl }];
+  }
+
   return {
     title: `${game.title} | steamgg`,
     description: game.shortDescription,
-    openGraph: {
-      title: game.title,
-      description: game.shortDescription,
-      images: [{ url: game.coverImageUrl }],
-    },
+    openGraph,
   };
 }
 
@@ -30,6 +42,9 @@ export default async function DetailPage({ params }: DetailPageProps) {
   if (!game) notFound();
 
   const similarGames = await fetchSimilarGames(id, 3);
+  const reviewDescription = hasSteamReviews(game)
+    ? formatReviewScoreDescription(game.reviewScoreDescription) || "Steam 리뷰"
+    : "정보 없음";
 
   return (
     <main className="mx-auto w-full max-w-4xl px-5 py-8 sm:px-8 sm:py-10">
@@ -88,7 +103,7 @@ export default async function DetailPage({ params }: DetailPageProps) {
 
         {/* ── Metadata group ── */}
         <div className="mt-6 border-t border-[#2A313C] pt-5">
-          <dl className="grid grid-cols-3 gap-4 sm:grid-cols-3">
+          <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <div>
               <dt className="text-xs text-[#8A93A0]">장르</dt>
               <dd className="mt-1 text-sm font-medium text-[#F5F7FA]">
@@ -96,9 +111,18 @@ export default async function DetailPage({ params }: DetailPageProps) {
               </dd>
             </div>
             <div>
-              <dt className="text-xs text-[#8A93A0]">평점</dt>
+              <dt className="text-xs text-[#8A93A0]">SteamGG 점수</dt>
               <dd className="mt-1 text-sm font-medium text-[#F5F7FA]">
-                ★ {game.rating}
+                {formatRating(game.rating)}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs text-[#8A93A0]">Steam 리뷰</dt>
+              <dd className="mt-1 text-sm font-medium text-[#F5F7FA]">
+                {reviewDescription}
+              </dd>
+              <dd className="mt-0.5 text-xs text-[#8A93A0]">
+                {formatReviewSummary(game)}
               </dd>
             </div>
             <div>
@@ -158,7 +182,7 @@ export default async function DetailPage({ params }: DetailPageProps) {
                 <div className="flex flex-1 flex-col p-3">
                   <div className="flex items-center justify-between gap-1">
                     <span className="text-xs text-[#8A93A0]">{similar.genre}</span>
-                    <span className="text-xs text-[#8A93A0]">★ {similar.rating}</span>
+                    <span className="text-xs text-[#8A93A0]">★ {formatRating(similar.rating)}</span>
                   </div>
                   <h3 className="mt-1 line-clamp-1 text-sm font-semibold text-[#F5F7FA]">
                     {similar.title}
@@ -167,7 +191,9 @@ export default async function DetailPage({ params }: DetailPageProps) {
                     {similar.tags.slice(0, 2).join(" · ")}
                   </p>
                   <div className="mt-auto flex items-center justify-between pt-3">
-                    <span className="text-xs text-[#8A93A0]">인기 점수 {similar.popularity}</span>
+                    <span className="min-w-0 truncate text-xs text-[#8A93A0]">
+                      {formatReviewSummary(similar)}
+                    </span>
                     <span className="text-xs font-semibold text-[#F5F7FA]">
                       {similar.priceLabel}
                     </span>

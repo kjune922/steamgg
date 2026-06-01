@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { fetchGameFacets, fetchGamePage } from "../lib/games";
+import { fetchGameFacets, fetchGamePage, formatRating, formatReviewSummary } from "../lib/games";
 
 type ListPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -34,7 +34,7 @@ function buildUrl(p: {
 }
 
 function includeSelected(options: string[], selected: string, fallbackPrefix: string[] = []) {
-  const base = options.length === 0 ? fallbackPrefix : options;
+  const base = Array.from(new Set([...fallbackPrefix, ...options]));
   if (selected && selected !== "All" && !base.includes(selected)) {
     return [...fallbackPrefix, selected, ...base.filter((option) => !fallbackPrefix.includes(option))];
   }
@@ -98,17 +98,38 @@ export default async function ListPage({ searchParams }: ListPageProps) {
 
   const genre = genreParam || "All";
   const tag = tagParam;
-  const [gamePage, facets] = await Promise.all([
-    fetchGamePage({
-      q: rawQuery,
-      genre,
-      tag,
-      sort,
-      page: currentPage,
-      size: PAGE_SIZE,
-    }),
-    fetchGameFacets(),
-  ]);
+  let gamePage: Awaited<ReturnType<typeof fetchGamePage>>;
+  let facets: Awaited<ReturnType<typeof fetchGameFacets>>;
+  try {
+    [gamePage, facets] = await Promise.all([
+      fetchGamePage({
+        q: rawQuery,
+        genre,
+        tag,
+        sort,
+        page: currentPage,
+        size: PAGE_SIZE,
+      }),
+      fetchGameFacets(),
+    ]);
+  } catch {
+    return (
+      <main className="mx-auto w-full max-w-5xl px-5 py-8 sm:px-8 sm:py-10">
+        <div className="panel flex flex-col items-center px-5 py-16 text-center">
+          <p className="text-sm font-medium text-[#F5F7FA]">서버에 연결할 수 없습니다</p>
+          <p className="mt-1 max-w-md text-xs text-[#8A93A0]">
+            백엔드 API 상태를 확인한 뒤 검색과 필터를 다시 시도해주세요.
+          </p>
+          <Link
+            href="/"
+            className="mt-4 cursor-pointer rounded-lg border border-[#2A313C] bg-[#181C22] px-4 py-2 text-xs font-semibold text-[#B6BEC9] hover:bg-[#20252D]"
+          >
+            홈으로
+          </Link>
+        </div>
+      </main>
+    );
+  }
 
   const paginated = gamePage.items;
   const totalCount = gamePage.totalCount;
@@ -320,7 +341,7 @@ export default async function ListPage({ searchParams }: ListPageProps) {
                   <div className="flex flex-1 flex-col p-3">
                     <div className="flex items-center justify-between gap-1">
                       <span className="text-xs text-[#8A93A0]">{game.genre}</span>
-                      <span className="text-xs text-[#8A93A0]">★ {game.rating}</span>
+                      <span className="text-xs text-[#8A93A0]">★ {formatRating(game.rating)}</span>
                     </div>
                     <h2 className="mt-1 line-clamp-1 text-sm font-semibold text-[#F5F7FA]">
                       {game.title}
@@ -329,7 +350,9 @@ export default async function ListPage({ searchParams }: ListPageProps) {
                       {game.tags.slice(0, 2).join(" · ")}
                     </p>
                     <div className="mt-auto flex items-center justify-between gap-2 pt-3">
-                      <span className="text-xs text-[#8A93A0]">인기 점수 {game.popularity}</span>
+                      <span className="min-w-0 truncate text-xs text-[#8A93A0]">
+                        {formatReviewSummary(game)}
+                      </span>
                       <span className="text-xs font-semibold text-[#F5F7FA]">
                         {game.priceLabel}
                       </span>

@@ -3,9 +3,9 @@ output "steamgg_vpc_id" {
 }
 
 output "steamgg_public_subnet_ids" {
-  value = [aws_subnet.steamgg_public_subnet_1.id,aws_subnet.steamgg_public_subnet_2.id]
+  value = [aws_subnet.steamgg_public_subnet_1.id, aws_subnet.steamgg_public_subnet_2.id]
 }
 
 output "steamgg_private_subnet_ids" {
-  value = [aws_subnet.steamgg_private_subnet_1.id,aws_subnet.steamgg_private_subnet_2.id]
+  value = [aws_subnet.steamgg_private_subnet_1.id, aws_subnet.steamgg_private_subnet_2.id]
 }

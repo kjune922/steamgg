@@ -21,6 +21,12 @@ public class Games {
 
     private double rating;
     private int popularity;
+    private int reviewPositive;
+    private int reviewNegative;
+    private int reviewTotal;
+
+    @Column(columnDefinition = "TEXT")
+    private String reviewScoreDescription;
 
     @Column(columnDefinition = "TEXT")
     private String priceLabel;
@@ -42,6 +48,29 @@ public class Games {
     public Games(String id, String title, String genre, List<String> tags, String coverImageUrl,
                  double rating, int popularity, String priceLabel, String shortDescription,
                  String description, String purchaseUrl) {
+        this(
+                id,
+                title,
+                genre,
+                tags,
+                coverImageUrl,
+                rating,
+                popularity,
+                priceLabel,
+                shortDescription,
+                description,
+                purchaseUrl,
+                0,
+                0,
+                0,
+                ""
+        );
+    }
+
+    public Games(String id, String title, String genre, List<String> tags, String coverImageUrl,
+                 double rating, int popularity, String priceLabel, String shortDescription,
+                 String description, String purchaseUrl, int reviewPositive, int reviewNegative,
+                 int reviewTotal, String reviewScoreDescription) {
         this.id = id;
         this.title = title;
         this.genre = genre;
@@ -49,10 +78,34 @@ public class Games {
         this.coverImageUrl = coverImageUrl;
         this.rating = rating;
         this.popularity = popularity;
+        this.reviewPositive = reviewPositive;
+        this.reviewNegative = reviewNegative;
+        this.reviewTotal = reviewTotal;
+        this.reviewScoreDescription = reviewScoreDescription;
         this.priceLabel = priceLabel;
         this.shortDescription = shortDescription;
         this.description = description;
         this.purchaseUrl = purchaseUrl;
+    }
+
+    public void updatePopularity(int popularity) {
+        if (popularity > 0) {
+            this.popularity = popularity;
+        }
+    }
+
+    public void updateReviewMetrics(
+            double rating,
+            int reviewPositive,
+            int reviewNegative,
+            int reviewTotal,
+            String reviewScoreDescription
+    ) {
+        this.rating = rating;
+        this.reviewPositive = Math.max(0, reviewPositive);
+        this.reviewNegative = Math.max(0, reviewNegative);
+        this.reviewTotal = Math.max(0, reviewTotal);
+        this.reviewScoreDescription = reviewScoreDescription == null ? "" : reviewScoreDescription;
     }
 
     // Getter (프론트엔드 JSON 변환을 위해 필수)
@@ -63,6 +116,10 @@ public class Games {
     public String getCoverImageUrl() { return coverImageUrl; }
     public double getRating() { return rating; }
     public int getPopularity() { return popularity; }
+    public int getReviewPositive() { return reviewPositive; }
+    public int getReviewNegative() { return reviewNegative; }
+    public int getReviewTotal() { return reviewTotal; }
+    public String getReviewScoreDescription() { return reviewScoreDescription; }
     public String getPriceLabel() { return priceLabel; }
     public String getShortDescription() { return shortDescription; }
     public String getDescription() { return description; }

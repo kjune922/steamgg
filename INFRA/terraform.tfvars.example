@@ -1,0 +1,9 @@
+steamgg_db_username = "postgres"
+steamgg_db_password = "replace-with-a-local-secret"
+steamgg_admin_sync_token = "replace-with-an-admin-sync-token"
+steamgg_steam_auto_sync_enabled = false
+
+# Comma-separated frontend origins that can call the Spring Boot API.
+# Example after Vercel deploy:
+# steamgg_cors_allowed_origins = "http://localhost:3000,https://steamgg.vercel.app,https://www.example.com"
+steamgg_cors_allowed_origins = "http://localhost:3000"

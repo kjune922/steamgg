@@ -2,14 +2,19 @@ name: Deploy to Amazon EC2
 
 on:
   push:
-    # 모든 feature/ 로 시작하는 브랜치와 main,develop에서 작동하도록 바꿈
-    branches: [ "main", "develop", "feature/**" ]
+    branches: ["main", "develop", "feature/**"]
   pull_request:
-    branches: [ "main", "develop" ]
+    branches: ["main", "develop"]
+  workflow_dispatch:
+    inputs:
+      workspace:
+        description: "Terraform workspace suffix used in AWS resource names"
+        required: false
+        default: "default"
 
 jobs:
-  deploy:
-    name: Build and Push to ECR
+  backend-quality:
+    name: Backend Quality
     runs-on: ubuntu-latest
 
     steps:
@@ -17,13 +22,57 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
-          java-version: '17'
-          distribution: 'temurin'
-          # pom.xml 위치를 알려줍니다.
+          java-version: "17"
+          distribution: "temurin"
           cache: maven
-          build-path: demo/pom.xml
+          cache-dependency-path: demo/pom.xml
+
+      - name: Run backend tests
+        working-directory: demo
+        run: |
+          chmod +x ./mvnw
+          ./mvnw test
+
+  frontend-quality:
+    name: Frontend Quality
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Lint frontend
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Build frontend
+        working-directory: frontend
+        env:
+          API_BASE_URL: http://localhost:8080
+        run: npm run build
+
+  deploy:
+    name: Build, Push, and Deploy Backend
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    needs: [backend-quality, frontend-quality]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -37,14 +86,88 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build, tag, and push image to Amazon ECR
-        id: build-image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          # demo 폴더로 이동해서 빌드하거나, 경로를 demo/로 지정해야 합니다.
-          docker build -t $ECR_REGISTRY/${{ secrets.ECR_REPOSITORY }}:$IMAGE_TAG ./demo
-          docker build -t $ECR_REGISTRY/${{ secrets.ECR_REPOSITORY }}:latest ./demo
-          
+          docker build \
+            -t $ECR_REGISTRY/${{ secrets.ECR_REPOSITORY }}:$IMAGE_TAG \
+            -t $ECR_REGISTRY/${{ secrets.ECR_REPOSITORY }}:latest \
+            ./demo
+
           docker push $ECR_REGISTRY/${{ secrets.ECR_REPOSITORY }}:$IMAGE_TAG
           docker push $ECR_REGISTRY/${{ secrets.ECR_REPOSITORY }}:latest
+
+      - name: Deploy latest image to EC2 with SSM
+        env:
+          DEPLOY_WORKSPACE: ${{ inputs.workspace || vars.TERRAFORM_WORKSPACE || 'default' }}
+        run: |
+          set -euo pipefail
+
+          INSTANCE_IDS=$(aws ec2 describe-instances \
+            --filters "Name=tag:Name,Values=steamgg-asg-instance-${DEPLOY_WORKSPACE}" "Name=instance-state-name,Values=running" \
+            --query "Reservations[].Instances[].InstanceId" \
+            --output text)
+
+          if [ -z "$INSTANCE_IDS" ]; then
+            echo "No running EC2 instances found for steamgg-asg-instance-${DEPLOY_WORKSPACE}"
+            exit 1
+          fi
+
+          COMMAND_ID=""
+          for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
+            if COMMAND_ID=$(aws ssm send-command \
+              --document-name "AWS-RunShellScript" \
+              --comment "Deploy steamgg ${GITHUB_SHA}" \
+              --instance-ids $INSTANCE_IDS \
+              --parameters 'commands=["for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do if [ -x /opt/steamgg/deploy.sh ]; then sudo /opt/steamgg/deploy.sh; exit $?; fi; echo deploy.sh not ready on attempt ${attempt}; sleep 10; done; echo deploy.sh was not created by user-data; exit 1"]' \
+              --query "Command.CommandId" \
+              --output text); then
+              break
+            fi
+
+            echo "SSM send-command failed on attempt ${attempt}; retrying..."
+            sleep 10
+          done
+
+          if [ -z "$COMMAND_ID" ]; then
+            echo "Failed to start SSM deployment command"
+            exit 1
+          fi
+
+          for INSTANCE_ID in $INSTANCE_IDS; do
+            set +e
+            aws ssm wait command-executed --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID"
+            WAIT_STATUS=$?
+            set -e
+
+            aws ssm get-command-invocation \
+              --command-id "$COMMAND_ID" \
+              --instance-id "$INSTANCE_ID" \
+              --query "{Status:Status,ResponseCode:ResponseCode,Stdout:StandardOutputContent,Stderr:StandardErrorContent}"
+
+            if [ "$WAIT_STATUS" -ne 0 ]; then
+              exit "$WAIT_STATUS"
+            fi
+          done
+
+      - name: Verify ALB health endpoint
+        env:
+          DEPLOY_WORKSPACE: ${{ inputs.workspace || vars.TERRAFORM_WORKSPACE || 'default' }}
+        run: |
+          set -euo pipefail
+
+          ALB_DNS=$(aws elbv2 describe-load-balancers \
+            --names "steamgg-alb-${DEPLOY_WORKSPACE}" \
+            --query "LoadBalancers[0].DNSName" \
+            --output text)
+
+          for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
+            if curl --fail --silent --show-error "http://${ALB_DNS}/api/health"; then
+              exit 0
+            fi
+            echo "ALB health check failed on attempt ${attempt}; retrying..."
+            sleep 10
+          done
+
+          curl --fail --show-error "http://${ALB_DNS}/api/health"

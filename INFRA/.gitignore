@@ -4,7 +4,6 @@
 *.tfstate.*
 *.tfvars
 *.tfvars.json
-.terraform.lock.hcl
 
 # === Python (현재 테스트용) ===
 venv/

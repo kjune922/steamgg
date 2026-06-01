@@ -9,6 +9,9 @@
 output "steamgg_alb-arn" {
   value = module.alb.steamgg_alb_dns_name
 }
+output "steamgg_alb_dns_name" {
+  value = module.alb.steamgg_alb_dns_name
+}
 output "steamgg_ecr_repository_url" {
   value = aws_ecr_repository.steamgg_app_repo.repository_url
 }

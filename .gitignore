@@ -1,0 +1,22 @@
+# Local secrets and environment
+.env
+.env.*
+!.env.example
+*.tfvars
+*.tfvars.json
+
+# Terraform local state
+terraform.tfstate
+terraform.tfstate.*
+**/.terraform/
+**/.terraform.tfstate.lock.info
+
+# Logs
+*.log
+
+# IDE and local assistant state
+.idea/
+.vscode/
+.claude/
+.understand-anything/
+.git-switch-backup/
